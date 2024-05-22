@@ -1,33 +1,58 @@
-from flask import request, jsonify
+from flask import Blueprint, request, jsonify
+import mysql.connector
 import numpy as np
-from app import app
-from app.preprocess import preprocess_text, vectorize_text, connect_to_database, get_all_job_vectors, get_all_problem_vectors, get_user_vector
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
+from .preprocess import preprocess_text
 import json
 
-@app.route('/')
-def home():
-    return "Flask app is running!"
+main = Blueprint('main', __name__)
 
-# Function to add CORS headers
-def add_cors_headers(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-    return response
+def connect_to_database():
+    return mysql.connector.connect(
+        host='127.0.0.1',
+        user='rash_rashahly',
+        password='NlvoJ6%MnCjlbP5a',
+        database='rash_rashahly'
+    )
 
-# Endpoint to recommend jobs and problems to a user
-@app.route('/recommendations', methods=['POST'])
+tfidf_vectorizer = TfidfVectorizer(preprocessor=preprocess_text)
+
+def vectorize_text(text):
+    tfidf_matrix = tfidf_vectorizer.fit_transform([text])
+    return tfidf_matrix.toarray()[0]
+
+def get_all_job_vectors(conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT job_id, tfidf_vector FROM job_tfidf_vectors")
+    job_vectors = cursor.fetchall()
+    cursor.close()
+    return job_vectors
+
+def get_all_problem_vectors(conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT problem_id, tfidf_vector FROM problem_tfidf_vectors")
+    problem_vectors = cursor.fetchall()
+    cursor.close()
+    return problem_vectors
+
+def get_user_vector(user_id, conn):
+    cursor = conn.cursor()
+    cursor.execute("SELECT tfidf_vector FROM user_tfidf_vectors WHERE user_id = %s", (user_id,))
+    result = cursor.fetchone()
+    cursor.close()
+    if result:
+        return np.array(json.loads(result[0]))
+    else:
+        return None
+
+@main.route('/recommendations', methods=['POST'])
 def recommend():
     data = request.get_json()
     user_id = data.get('user_id', '')
     if user_id:
         conn = connect_to_database()
         user_vector = get_user_vector(user_id, conn)
-        
-        if user_vector is None:
-            return jsonify({'error': 'User vector not found.'}), 404
-        
         job_vectors = get_all_job_vectors(conn)
         job_recommendations = []
         for job_id, job_vector in job_vectors:
@@ -49,17 +74,15 @@ def recommend():
         top_problem_recommendations = problem_recommendations[:10]
 
         conn.close()
-
         return jsonify({
             'user_id': user_id,
             'top_job_recommendations': top_job_recommendations,
             'top_problem_recommendations': top_problem_recommendations
         })
     else:
-        return jsonify({'error': 'User ID is required.'}), 400
+        return jsonify({'error': 'User ID, bio, and profession are required.'}), 400
 
-# Endpoint to vectorize user bio and profession
-@app.route('/vectorize_user', methods=['POST'])
+@main.route('/vectorize_user', methods=['POST'])
 def vectorize_user():
     data = request.get_json()
     user_id = data.get('user_id', '')
@@ -72,30 +95,28 @@ def vectorize_user():
     else:
         return jsonify({'error': 'User ID, bio, and profession are required.'}), 400
 
-# Endpoint to vectorize job title and description
-@app.route('/vectorize_job', methods=['POST'])
+@main.route('/vectorize_job', methods=['POST'])
 def vectorize_job():
     data = request.get_json()
-    job_id = data.get('job_id', '')
-    title = data.get('title', '')
+    job_id = data.get('id', '')
+    title = data.get('name', '')
     description = data.get('description', '')
     if job_id and title and description:
         combined_text = title + " " + description
         job_vector = vectorize_text(combined_text)
-        return jsonify({'job_id': job_id, 'vector': job_vector.tolist()})
+        return jsonify({'id': job_id, 'vector': job_vector.tolist()})
     else:
-        return jsonify({'error': 'Job ID, title, and description are required.'}), 400
+        return jsonify({'error': 'ID, name, and description are required.'}), 400
 
-# Endpoint to vectorize problem name and description
-@app.route('/vectorize_problem', methods=['POST'])
+@main.route('/vectorize_problem', methods=['POST'])
 def vectorize_problem():
     data = request.get_json()
-    problem_id = data.get('problem_id', '')
+    problem_id = data.get('id', '')
     name = data.get('name', '')
     description = data.get('description', '')
     if problem_id and name and description:
         combined_text = name + " " + description
         problem_vector = vectorize_text(combined_text)
-        return jsonify({'problem_id': problem_id, 'vector': problem_vector.tolist()})
+        return jsonify({'id': problem_id, 'vector': problem_vector.tolist()})
     else:
         return jsonify({'error': 'Problem ID, name, and description are required.'}), 400
