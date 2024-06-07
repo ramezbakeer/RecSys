@@ -24,21 +24,21 @@ def vectorize_text(text):
 
 def get_all_job_vectors(conn):
     cursor = conn.cursor()
-    cursor.execute("SELECT job_id, tfidf_vector FROM job_tfidf_vectors")
+    cursor.execute("SELECT id, vector FROM jobs")
     job_vectors = cursor.fetchall()
     cursor.close()
     return job_vectors
 
 def get_all_problem_vectors(conn):
     cursor = conn.cursor()
-    cursor.execute("SELECT problem_id, tfidf_vector FROM problem_tfidf_vectors")
+    cursor.execute("SELECT id, vector FROM problems")
     problem_vectors = cursor.fetchall()
     cursor.close()
     return problem_vectors
 
 def get_user_vector(user_id, conn):
     cursor = conn.cursor()
-    cursor.execute("SELECT tfidf_vector FROM user_tfidf_vectors WHERE user_id = %s", (user_id,))
+    cursor.execute("SELECT vectorize_user FROM profile_types WHERE user_id = %s", (user_id,))
     result = cursor.fetchone()
     cursor.close()
     if result:
@@ -80,7 +80,7 @@ def recommend():
             'top_problem_recommendations': top_problem_recommendations
         })
     else:
-        return jsonify({'error': 'User ID, bio, and profession are required.'}), 400
+        return jsonify({'error': 'User ID is required.'}), 400
 
 @main.route('/vectorize_user', methods=['POST'])
 def vectorize_user():
