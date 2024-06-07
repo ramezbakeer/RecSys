@@ -10,7 +10,7 @@ main = Blueprint('main', __name__)
 
 def connect_to_database():
     return mysql.connector.connect(
-        host='127.0.0.1',
+        host='172.203.179.65',
         user='rash_rashahly',
         password='NlvoJ6%MnCjlbP5a',
         database='rash_rashahly'
