@@ -1,21 +1,24 @@
 from flask import Blueprint, request, jsonify
-import mysql.connector
+import pymysql
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import TfidfVectorizer
 from .preprocess import preprocess_text
 import json
+import os
 
 main = Blueprint('main', __name__)
 
 def connect_to_database():
-    return mysql.connector.connect(
-        host='172.203.179.65',
-        user='rash_rashahly',
-        password='NlvoJ6%MnCj',
-        database='rash_rashahly'
+    return pymysql.connect(
+        host=os.getenv('DB_HOST'),
+        user=os.getenv('DB_USER'),
+        password=os.getenv('DB_PASSWORD'),
+        database=os.getenv('DB_NAME'),
+        port=int(os.getenv('DB_PORT')),
+        connect_timeout=10  # You can adjust the timeout value as needed
     )
-
+    
 tfidf_vectorizer = TfidfVectorizer(preprocessor=preprocess_text)
 
 def vectorize_text(text):
