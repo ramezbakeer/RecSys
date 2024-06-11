@@ -31,7 +31,7 @@ def get_all_job_vectors(conn):
     job_vectors = cursor.fetchall()
     cursor.close()
     return job_vectors
-
+#get 
 def get_all_problem_vectors(conn):
     cursor = conn.cursor()
     cursor.execute("SELECT id, vector FROM problems")
