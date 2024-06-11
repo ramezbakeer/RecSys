@@ -1,5 +1,5 @@
 flask
-mysql-connector-python
+pymysql
 numpy
 scikit-learn
 nltk
