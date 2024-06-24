@@ -34,7 +34,7 @@ def get_all_job_vectors(conn):
     job_vectors = cursor.fetchall()
     cursor.close()
     return job_vectors
-#get 
+
 def get_all_problem_vectors(conn):
     cursor = conn.cursor()
     cursor.execute("SELECT id, vector FROM problems")
@@ -49,15 +49,13 @@ def get_user_vector(user_id, conn):
     cursor.close()
     if result:
         try:
-            logging.info(f"Retrieved vector data for user {user_id}: {result[0]}")
             user_vector = np.array(json.loads(result[0]))
-            if np.any(np.isnan(user_vector)):
-                logging.error(f"NaN values found in user vector for user_id: {user_id}")
+            if np.any(np.isnan(user_vector)) or len(user_vector) != len(tfidf_vectorizer.get_feature_names_out()):
+                logging.error(f"Invalid user vector for user_id: {user_id}")
                 return None
             return user_vector
         except json.JSONDecodeError as e:
             logging.error(f"Error decoding JSON for user vector: {e}")
-            logging.error(f"Retrieved data: {result[0]}")
             return None
     else:
         logging.error(f"No vector found for user_id: {user_id}")
@@ -77,8 +75,8 @@ def recommend():
         job_recommendations = []
         for job_id, job_vector in job_vectors:
             job_vector = np.array(json.loads(job_vector))
-            if np.any(np.isnan(job_vector)):
-                logging.error(f"NaN values found in job vector for job_id: {job_id}")
+            if np.any(np.isnan(job_vector)) or len(job_vector) != len(user_vector):
+                logging.error(f"Invalid job vector for job_id: {job_id}")
                 continue
             similarity_score = cosine_similarity([user_vector], [job_vector])[0][0]
             job_recommendations.append((job_id, similarity_score))
@@ -90,8 +88,8 @@ def recommend():
         problem_recommendations = []
         for problem_id, problem_vector in problem_vectors:
             problem_vector = np.array(json.loads(problem_vector))
-            if np.any(np.isnan(problem_vector)):
-                logging.error(f"NaN values found in problem vector for problem_id: {problem_id}")
+            if np.any(np.isnan(problem_vector)) or len(problem_vector) != len(user_vector):
+                logging.error(f"Invalid problem vector for problem_id: {problem_id}")
                 continue
             similarity_score = cosine_similarity([user_vector], [problem_vector])[0][0]
             problem_recommendations.append((problem_id, similarity_score))
@@ -107,7 +105,7 @@ def recommend():
         })
     else:
         return jsonify({'error': 'User ID is required.'}), 400
-        
+
 @main.route('/vectorize_user', methods=['POST'])
 def vectorize_user():
     data = request.get_json()
