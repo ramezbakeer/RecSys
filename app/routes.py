@@ -50,7 +50,7 @@ def get_user_vector(user_id, conn):
     if result:
         try:
             user_vector = np.array(json.loads(result[0]))
-            if np.any(np.isnan(user_vector)) or len(user_vector) != len(tfidf_vectorizer.get_feature_names_out()):
+            if np.any(np.isnan(user_vector)):
                 logging.error(f"Invalid user vector for user_id: {user_id}")
                 return None
             return user_vector
@@ -75,7 +75,7 @@ def recommend():
         job_recommendations = []
         for job_id, job_vector in job_vectors:
             job_vector = np.array(json.loads(job_vector))
-            if np.any(np.isnan(job_vector)) or len(job_vector) != len(user_vector):
+            if np.any(np.isnan(job_vector)):
                 logging.error(f"Invalid job vector for job_id: {job_id}")
                 continue
             similarity_score = cosine_similarity([user_vector], [job_vector])[0][0]
@@ -88,7 +88,7 @@ def recommend():
         problem_recommendations = []
         for problem_id, problem_vector in problem_vectors:
             problem_vector = np.array(json.loads(problem_vector))
-            if np.any(np.isnan(problem_vector)) or len(problem_vector) != len(user_vector):
+            if np.any(np.isnan(problem_vector)):
                 logging.error(f"Invalid problem vector for problem_id: {problem_id}")
                 continue
             similarity_score = cosine_similarity([user_vector], [problem_vector])[0][0]
